@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/jjimgo/Go_AWS/goConfig"
@@ -21,5 +20,13 @@ func init() {
 }
 
 func main() {
-	fmt.Println("Golang Aws Service Start")
+	// file, _ := os.Open("abc.txt")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// scanner := bufio.NewScanner(file)
+	// for scanner.Scan() {
+	// 	fmt.Println(scanner.Text())
+	// }
 }
