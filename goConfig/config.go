@@ -7,7 +7,9 @@ import (
 )
 
 type GoConfig struct {
-	AWS_REGION string `mapstructure:"aws_region"`
+	AWS_REGION     string `mapstructure:"aws_region"`
+	IAM_ACCESS_KEY string `mapstructure:"access_key"`
+	IAM_SECRET_KEY string `mapstructure:"secret_key"`
 }
 
 func LoadGoConfig(path string) GoConfig {

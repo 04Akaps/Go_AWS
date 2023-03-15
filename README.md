@@ -13,3 +13,5 @@ Golang에서 AWS서비스를 어떻게 활용하는지에 대한 repo
 # app.env 형태
 
 aws_region= <value> -> 사용하는 aws서비스의 region
+access_key= <value>
+secret_key= <value>
