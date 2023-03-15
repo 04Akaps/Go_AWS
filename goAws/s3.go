@@ -39,6 +39,11 @@ func (goaws *AwsSession) PutFileToS3(fileName, fileKey string, file *os.File) {
 	errhandle.ErrHandling(err)
 }
 
+type jsonTest struct {
+	Name string `json:"name"`
+	Age  string `json:"age"`
+}
+
 func (goaws *AwsSession) GetFileFromS3(bucket, filekey string) []byte {
 	// 특정 객체를 가져오는 함수
 	goaws.getAclFromS3(bucket, filekey)
@@ -53,6 +58,7 @@ func (goaws *AwsSession) GetFileFromS3(bucket, filekey string) []byte {
 	defer res.Body.Close()
 
 	body, err := ioutil.ReadAll(res.Body)
+
 	errhandle.ErrHandling(err)
 
 	return body

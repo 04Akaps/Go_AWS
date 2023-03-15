@@ -20,7 +20,7 @@ func init() {
 }
 
 func main() {
-	// file, _ := os.Open("abc.txt")
+	// file, _ := os.Open("test.json")
 	// if err != nil {
 	// 	log.Fatal(err)
 	// }
@@ -29,4 +29,9 @@ func main() {
 	// for scanner.Scan() {
 	// 	fmt.Println(scanner.Text())
 	// }
+
+	// awsSession.PutFileToS3("go-aws-test-bucket", "test.json", file)
+	awsSession.GetFileFromS3("go-aws-test-bucket", "test.json")
+	// awsSession.GetS3BucketList()
+	// awsSession.GetAllObjectFromS3("go-aws-test-bucket")
 }
