@@ -4,13 +4,15 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 
-	"github.com/jjimgo/Go_AWS.git/errhandle"
-	"github.com/jjimgo/Go_AWS.git/goConfig"
+	"github.com/jjimgo/Go_AWS/errhandle"
+	"github.com/jjimgo/Go_AWS/goConfig"
 )
 
 type AwsSession struct {
 	AwsSession *session.Session
+	S3         *s3.S3
 }
 
 func GetSession(goConfig goConfig.GoConfig) *AwsSession {
@@ -30,9 +32,12 @@ func GetSession(goConfig goConfig.GoConfig) *AwsSession {
 		},
 	})
 
+	svc := s3.New(awsSession)
+
 	errhandle.ErrHandling(err)
 
 	return &AwsSession{
 		AwsSession: awsSession,
+		S3:         svc,
 	}
 }

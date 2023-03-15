@@ -1,4 +1,4 @@
-module github.com/jjimgo/Go_AWS.git
+module github.com/jjimgo/Go_AWS
 
 go 1.19
 

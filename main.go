@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/jjimgo/Go_AWS.git/goConfig"
-	"github.com/jjimgo/Go_AWS.git/goaws"
+	"github.com/jjimgo/Go_AWS/goConfig"
+	"github.com/jjimgo/Go_AWS/goaws"
 )
 
 var (
