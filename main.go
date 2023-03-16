@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/jjimgo/Go_AWS/goConfig"
 	"github.com/jjimgo/Go_AWS/goaws"
@@ -20,7 +21,7 @@ func init() {
 }
 
 func main() {
-	// file, _ := os.Open("test.json")
+	file, _ := os.Open("file/test.json")
 	// if err != nil {
 	// 	log.Fatal(err)
 	// }
@@ -30,8 +31,8 @@ func main() {
 	// 	fmt.Println(scanner.Text())
 	// }
 
-	// awsSession.PutFileToS3("go-aws-test-bucket", "test.json", file)
-	awsSession.GetFileFromS3("go-aws-test-bucket", "test.json")
+	awsSession.PutFileToS3("go-aws-test-bucket", "test.json", "testMeatData", "abc", file)
+	// awsSession.GetFileFromS3("go-aws-test-bucket", "test.json")
 	// awsSession.GetS3BucketList()
 	// awsSession.GetAllObjectFromS3("go-aws-test-bucket")
 }

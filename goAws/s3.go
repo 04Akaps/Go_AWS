@@ -8,6 +8,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/jjimgo/Go_AWS/errhandle"
 )
 
@@ -27,15 +28,51 @@ func (goaws *AwsSession) getAclFromS3(bucket, fileKey string) {
 	}
 }
 
-func (goaws *AwsSession) PutFileToS3(fileName, fileKey string, file *os.File) {
+func makeS3Matadata(metadataKey, metadataValue string) map[string]*string {
+	metadata := make(map[string]*string)
+
+	metadata[metadataKey] = aws.String(metadataValue)
+	return metadata
+}
+
+func (goaws *AwsSession) PutFileToS3(fileName, fileKey, metadataKey, metadataValue string, file *os.File) {
+	fileState, err := file.Stat()
+	errhandle.ErrHandling(err)
+	// 파일 사이즈에 따라서 다른 방식을 사용하는 것이 효율적이기 떄문에 분기를 쳐준다
+	// Size의 반환값이 byte이기 떄문에 100MB는 다음과 같은 수치를 가진다.
+	if fileState.Size() <= 100000000 {
+		goaws.putFileToS3UsingPutObject(fileName, fileKey, metadataKey, metadataValue, file)
+	} else {
+		goaws.pubFileToS3UsingUploader(fileName, fileKey, metadataKey, metadataValue, file)
+	}
+}
+
+func (goaws *AwsSession) putFileToS3UsingPutObject(fileName, fileKey, metadataKey, metadataValue string, file *os.File) {
 	// 특정 객체를 업로드 하는 함수
+
 	uploadInput := &s3.PutObjectInput{
-		Bucket: aws.String(fileName),
-		Key:    aws.String(fileKey),
-		Body:   file,
+		Bucket:   aws.String(fileName),
+		Key:      aws.String(fileKey),
+		Body:     file,
+		Metadata: makeS3Matadata(metadataKey, metadataValue),
 	}
 
 	_, err := goaws.S3.PutObject(uploadInput)
+	errhandle.ErrHandling(err)
+}
+
+func (goaws *AwsSession) pubFileToS3UsingUploader(fileName, fileKey, metadataKey, metadataValue string, file *os.File) {
+	// Uploader와 PutObject의 차이는 PutObject는 작은 용량의 파일을 업로드 할떄 유리
+	// Uploader내부적으로 파일을 쪼개서 업로드 하기 떄문에 큰 용량의 파일을 업로드 할 떄 유리하다.
+	// 대략적으로 100MB을 기준으로 사용 하면 된다.
+	uploadInput := &s3manager.UploadInput{
+		Bucket:   aws.String(fileName),
+		Key:      aws.String(fileKey),
+		Body:     file,
+		Metadata: makeS3Matadata(metadataKey, metadataValue),
+	}
+
+	_, err := goaws.S3Uploader.Upload(uploadInput)
 	errhandle.ErrHandling(err)
 }
 
