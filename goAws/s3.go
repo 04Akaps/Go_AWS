@@ -1,6 +1,7 @@
 package goaws
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -35,6 +36,25 @@ func makeS3Matadata(metadataKey, metadataValue string) map[string]*string {
 	return metadata
 }
 
+func (goaws *AwsSession) PutJsonFileToS3(fileName, fileKey, metadataKey, metadataValue string, byteData []byte) {
+	var buf bytes.Buffer
+
+	_, err := buf.Write(byteData)
+	errhandle.ErrHandling(err)
+
+	bytes.NewReader(buf.Bytes())
+
+	err = ioutil.WriteFile("tempUploadFile", buf.Bytes(), 0o644)
+
+	defer os.Remove("tempUploadFile")
+
+	file, err := os.Open("tempUploadFile")
+
+	defer file.Close()
+
+	goaws.PutFileToS3(fileName, fileKey, metadataKey, metadataValue, file)
+}
+
 func (goaws *AwsSession) PutFileToS3(fileName, fileKey, metadataKey, metadataValue string, file *os.File) {
 	fileState, err := file.Stat()
 	errhandle.ErrHandling(err)
@@ -49,7 +69,8 @@ func (goaws *AwsSession) PutFileToS3(fileName, fileKey, metadataKey, metadataVal
 
 func (goaws *AwsSession) putFileToS3UsingPutObject(fileName, fileKey, metadataKey, metadataValue string, file *os.File) {
 	// 특정 객체를 업로드 하는 함수
-
+	// 뭐든지 context를 사용하는 것이 좀 더 유연하고 좋기는 하다.
+	// 내부적으로 효율적으로 돌아가게 구성이 되어 있으니
 	uploadInput := &s3.PutObjectInput{
 		Bucket:   aws.String(fileName),
 		Key:      aws.String(fileKey),
@@ -83,7 +104,6 @@ type jsonTest struct {
 
 func (goaws *AwsSession) GetFileFromS3(bucket, filekey string) []byte {
 	// 특정 객체를 가져오는 함수
-	goaws.getAclFromS3(bucket, filekey)
 	downloadInput := &s3.GetObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(filekey),
@@ -130,7 +150,7 @@ func (goaws *AwsSession) GetAllObjectFromS3(bucket string) {
 }
 
 func (goaws *AwsSession) GetS3BucketPagination(bucketName string, maxKeys int64) {
-	// pagination을 적용하겨 가져오는 코드
+	// pagination을 적용하여 bucket에 있는 객체들을 가져 오는 방법
 
 	inputparams := &s3.ListObjectsInput{
 		Bucket:  aws.String(bucketName),
