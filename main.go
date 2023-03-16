@@ -38,9 +38,9 @@ func main() {
 	// // }
 	p := Person{"John", 30, "123 Main St"}
 	jsonBytes, _ := json.Marshal(p)
-	awsSession.PutJsonFileToS3("go-aws-test-bucket", "제발 되라.json", "testMeatData", "abc", jsonBytes)
+	awsSession.PutJsonFileToS3("go-aws-test-bucket", "sdlksdlksd.json", "testMeatData", "abc", jsonBytes)
 	// awsSession.PutFileToS3("go-aws-test-bucket", "test.json", "testMeatData", "abc", body)
-	// awsSession.GetFileFromS3("go-aws-test-bucket", "abc.json")
+	// awsSession.GetFileFromS3("go-aws-test-bucket", "제발 되라.json")
 	// // awsSession.GetS3BucketList()
 	// // awsSession.GetAllObjectFromS3("go-aws-test-bucket")
 }

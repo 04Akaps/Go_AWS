@@ -1,7 +1,6 @@
 package goaws
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -37,15 +36,8 @@ func makeS3Matadata(metadataKey, metadataValue string) map[string]*string {
 }
 
 func (goaws *AwsSession) PutJsonFileToS3(fileName, fileKey, metadataKey, metadataValue string, byteData []byte) {
-	var buf bytes.Buffer
-
-	_, err := buf.Write(byteData)
+	err := ioutil.WriteFile("tempUploadFile", byteData, 0o644)
 	errhandle.ErrHandling(err)
-
-	bytes.NewReader(buf.Bytes())
-
-	err = ioutil.WriteFile("tempUploadFile", buf.Bytes(), 0o644)
-
 	defer os.Remove("tempUploadFile")
 
 	file, err := os.Open("tempUploadFile")
@@ -97,11 +89,6 @@ func (goaws *AwsSession) pubFileToS3UsingUploader(fileName, fileKey, metadataKey
 	errhandle.ErrHandling(err)
 }
 
-type jsonTest struct {
-	Name string `json:"name"`
-	Age  string `json:"age"`
-}
-
 func (goaws *AwsSession) GetFileFromS3(bucket, filekey string) []byte {
 	// 특정 객체를 가져오는 함수
 	downloadInput := &s3.GetObjectInput{
@@ -111,7 +98,6 @@ func (goaws *AwsSession) GetFileFromS3(bucket, filekey string) []byte {
 
 	res, err := goaws.S3.GetObject(downloadInput)
 	errhandle.ErrHandling(err)
-
 	defer res.Body.Close()
 
 	body, err := ioutil.ReadAll(res.Body)
