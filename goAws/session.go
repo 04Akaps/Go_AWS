@@ -20,7 +20,11 @@ type AwsSession struct {
 	AwsSession *session.Session
 	S3         *s3.S3
 	S3Uploader *s3manager.Uploader
-	sqsQueue   *sqs.SQS
+}
+
+type SqsEmitter struct {
+	SqsSvc   *sqs.SQS
+	QueueURL *string
 }
 
 type CustomLogger struct {
@@ -52,12 +56,10 @@ func GetSession(goConfig goConfig.GoConfig) *AwsSession {
 
 	svc := s3.New(awsSession)
 	uploader := s3manager.NewUploader(awsSession)
-	sqsSvc := sqs.New(awsSession)
 
 	return &AwsSession{
 		AwsSession: awsSession,
 		S3:         svc,
 		S3Uploader: uploader,
-		sqsQueue:   sqsSvc,
 	}
 }

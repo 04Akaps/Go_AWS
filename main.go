@@ -47,5 +47,6 @@ func main() {
 	// 	errChannel <- err
 	// }
 
-	awsSession.SendMessageToSQS("golangEventQueue", "my Test Message")
+	// awsSession.SendMessageToSQS("golangEventQueue", "kdksdl")
+	// awsSession.GetMessageFromSQS("golangEventQueue")
 }

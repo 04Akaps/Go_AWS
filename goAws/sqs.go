@@ -5,9 +5,37 @@ import (
 	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/jjimgo/Go_AWS/errhandle"
 )
+
+type EventEmitter interface {
+	Emit() error
+}
+
+type EventListener interface {
+	Listen(events ...string) (<-chan string, <-chan error, error) // 일단 string으로 작성 어떻게 작성할지 구조 좀 생각하고 작성 예정
+}
+
+func (goaws *AwsSession) NewSQSEventEmitter(s *session.Session, queueName string) (EventListener, error) {
+	sqsSvc := sqs.New(goaws.AwsSession)
+	outInfo, err := sqsSvc.GetQueueUrl(&sqs.GetQueueUrlInput{
+		QueueName: aws.String(queueName),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &SqsEmitter{
+		SqsSvc:   sqsSvc,
+		QueueURL: outInfo.QueueUrl,
+	}, nil
+}
+
+func (sqsEmitter *SqsEmitter) Listen(events ...string) (<-chan string, <-chan error, error) {
+	return nil, nil, nil
+}
 
 /*
 큐로 메시지를 보내는 데에는 다음과 같은 기본적인 개념을 숙지하는 것이 좋다.
@@ -27,16 +55,7 @@ import (
 여기서 바이너리는 압축 파일이나 이미지 같은 바이너리를 의미
 */
 
-func (goaws *AwsSession) GetSQSQueuUrl(queunName string) *string {
-	QuInfo, err := goaws.sqsQueue.GetQueueUrl(&sqs.GetQueueUrlInput{
-		QueueName: aws.String(queunName),
-	})
-	errhandle.ErrHandling(err)
-
-	return QuInfo.QueueUrl
-}
-
-func (goaws *AwsSession) SendMessageToSQS(queueName, message string) {
+func (sqsEmitter *SqsEmitter) SendMessageToSQS(queueName, message string) {
 	attributes := map[string]*sqs.MessageAttributeValue{
 		"message_type": {
 			DataType:    aws.String("String"),
@@ -52,10 +71,10 @@ func (goaws *AwsSession) SendMessageToSQS(queueName, message string) {
 		},
 	}
 	// 이곳에 작성되는 추가적인 옵션이나 설명은 블로그에서 다룰 예정
-	sendResult, err := goaws.sqsQueue.SendMessage(&sqs.SendMessageInput{
+	sendResult, err := sqsEmitter.SqsSvc.SendMessage(&sqs.SendMessageInput{
 		MessageAttributes: attributes,
 		MessageBody:       aws.String(message),
-		QueueUrl:          goaws.GetSQSQueuUrl(queueName),
+		QueueUrl:          sqsEmitter.QueueURL,
 	})
 	errhandle.ErrHandling(err)
 
@@ -90,11 +109,11 @@ SQS는 기본적으로 메시지를 수신한다고, 해당 메시지가 삭제 
 
 // 이 함수는 특정 큐에 있는 메시지를 가져오는 함수가 된다.
 // 테스트 용도로 작성이 되며, 나중에는 go루틴으로 돌릴 예정이다.
-func (goaws *AwsSession) GetMessageFromSQS(queueName string) {
-	QueueUrl := goaws.GetSQSQueuUrl(queueName)
+func (sqsEmitter *SqsEmitter) GetMessageFromSQS(queueName string) {
+	QueueUrl := sqsEmitter.QueueURL
 
 	// 이곳에 작성되는 추가적인 옵션이나 설명은 블로그에서 다룰 예정
-	receivedMessage, err := goaws.sqsQueue.ReceiveMessage(&sqs.ReceiveMessageInput{
+	receivedMessage, err := sqsEmitter.SqsSvc.ReceiveMessage(&sqs.ReceiveMessageInput{
 		// 가져올 정보를 입력하게 된다.
 		AttributeNames: []*string{
 			aws.String(*aws.String(sqs.MessageSystemAttributeNameSentTimestamp)),
@@ -123,7 +142,7 @@ func (goaws *AwsSession) GetMessageFromSQS(queueName string) {
 
 		log.Println("------ Delete Message -------")
 
-		deletedInfo, err := goaws.sqsQueue.DeleteMessage(&sqs.DeleteMessageInput{
+		deletedInfo, err := sqsEmitter.SqsSvc.DeleteMessage(&sqs.DeleteMessageInput{
 			QueueUrl:      QueueUrl,
 			ReceiptHandle: msg.ReceiptHandle,
 		})
@@ -133,4 +152,6 @@ func (goaws *AwsSession) GetMessageFromSQS(queueName string) {
 		log.Println("Message Deleted...!!")
 		fmt.Println(deletedInfo)
 	}
+
+	// 수신을 하게 되면 전송할 떄의 MessageAttributes정보, Body값들 모두 나오게 된다.
 }
