@@ -1,6 +1,8 @@
 package goaws
 
 import (
+	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/jjimgo/Go_AWS/errhandle"
@@ -33,5 +35,28 @@ func (goaws *AwsSession) GetSQSQueuUrl(queunName string) *string {
 	return QuInfo.QueueUrl
 }
 
-func (goaws *AwsSession) SendMessageToSQS() {
+func (goaws *AwsSession) SendMessageToSQS(queueName, message string) {
+	attributes := map[string]*sqs.MessageAttributeValue{
+		"message_type": {
+			DataType:    aws.String("String"),
+			StringValue: aws.String("RESERVATION"),
+		},
+		"Count": {
+			DataType:    aws.String("Number"),
+			StringValue: aws.String("2"),
+		},
+		"Binary_Type": {
+			DataType:    aws.String("Binary"),
+			BinaryValue: []byte{0x00, 0x01, 0x02}, // [0,1,2]
+		},
+	}
+
+	sendResult, err := goaws.sqsQueue.SendMessage(&sqs.SendMessageInput{
+		MessageAttributes: attributes,
+		MessageBody:       aws.String(message),
+		QueueUrl:          goaws.GetSQSQueuUrl(queueName),
+	})
+	errhandle.ErrHandling(err)
+
+	fmt.Println(sendResult)
 }

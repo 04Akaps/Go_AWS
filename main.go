@@ -20,5 +20,5 @@ func init() {
 }
 
 func main() {
-	awsSession.GetSQSQueuUrl("golangEventQueue")
+	awsSession.SendMessageToSQS("golangEventQueue", "my Test Message")
 }
