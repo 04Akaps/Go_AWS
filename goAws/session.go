@@ -35,7 +35,7 @@ func (l *CustomLogger) Log(args ...interface{}) {
 func GetSession(goConfig goConfig.GoConfig) *AwsSession {
 	t := time.Now()
 	startTime := t.Format("2006-01-02 15:04:05")
-	logFile, err := os.Create("log/aws_" + startTime + ".log")
+	logFile, err := os.Create("awsLog/aws_" + startTime + ".log")
 	errhandle.ErrHandling(err)
 
 	logger := &CustomLogger{logFile: logFile}
