@@ -2,6 +2,7 @@ package goaws
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sqs"
@@ -90,16 +91,46 @@ SQS는 기본적으로 메시지를 수신한다고, 해당 메시지가 삭제 
 // 이 함수는 특정 큐에 있는 메시지를 가져오는 함수가 된다.
 // 테스트 용도로 작성이 되며, 나중에는 go루틴으로 돌릴 예정이다.
 func (goaws *AwsSession) GetMessageFromSQS(queueName string) {
+	QueueUrl := goaws.GetSQSQueuUrl(queueName)
+
 	// 이곳에 작성되는 추가적인 옵션이나 설명은 블로그에서 다룰 예정
-	goaws.sqsQueue.ReceiveMessage(&sqs.ReceiveMessageInput{
+	receivedMessage, err := goaws.sqsQueue.ReceiveMessage(&sqs.ReceiveMessageInput{
+		// 가져올 정보를 입력하게 된다.
 		AttributeNames: []*string{
 			aws.String(*aws.String(sqs.MessageSystemAttributeNameSentTimestamp)),
 		},
 		MessageAttributeNames: []*string{
 			aws.String(sqs.QueueAttributeNameAll),
 		},
-		QueueUrl:            goaws.GetSQSQueuUrl(queueName),
+		QueueUrl:            QueueUrl,
 		MaxNumberOfMessages: aws.Int64(10),
 		WaitTimeSeconds:     aws.Int64(20),
 	})
+	errhandle.ErrHandling(err)
+	fmt.Println(receivedMessage)
+	// 아래에 있는 코드는 수신된 메시지를 처리하는 코드이다.
+
+	for i, msg := range receivedMessage.Messages {
+		log.Println("NewMessage", i, *msg.Body)
+
+		for key, value := range msg.MessageAttributes {
+			log.Println("Message Attributes", key, aws.StringValue(value.StringValue))
+		}
+
+		for key, value := range msg.Attributes {
+			log.Println("Attrobite", key, *value)
+		}
+
+		log.Println("------ Delete Message -------")
+
+		deletedInfo, err := goaws.sqsQueue.DeleteMessage(&sqs.DeleteMessageInput{
+			QueueUrl:      QueueUrl,
+			ReceiptHandle: msg.ReceiptHandle,
+		})
+
+		errhandle.ErrHandling(err)
+
+		log.Println("Message Deleted...!!")
+		fmt.Println(deletedInfo)
+	}
 }
