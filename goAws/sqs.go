@@ -2,8 +2,10 @@ package goaws
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -16,7 +18,8 @@ type EventEmitter interface {
 }
 
 type EventListener interface {
-	Listen(events ...string) (<-chan Event, <-chan error, error) // 일단 string으로 작성 어떻게 작성할지 구조 좀 생각하고 작성 예정
+	Listen(events ...string) (<-chan Event, <-chan error, error)
+	ReceiveMessage(eventCh chan Event, errorCh chan error, events ...string)
 }
 
 type SqsEmitter struct {
@@ -37,7 +40,7 @@ type Event struct {
 	Age  string `json:"age"`
 }
 
-func NewSQSEventEmitter(s *session.Session, queueName string) (EventEmitter, error) {
+func NewSqsEventEmitter(s *session.Session, queueName string) (EventEmitter, error) {
 	sqsSvc := sqs.New(s)
 	outInfo, err := sqsSvc.GetQueueUrl(&sqs.GetQueueUrlInput{
 		QueueName: aws.String(queueName),
@@ -81,10 +84,82 @@ func NewSqsEventListener(s *session.Session, queueName string, maxMsg, waitTime,
 }
 
 func (sqsListener *SqsListener) Listen(events ...string) (<-chan Event, <-chan error, error) {
-	return nil, nil, nil
+	if sqsListener == nil {
+		return nil, nil, errors.New("SQSListener is nil : Listen()")
+	}
+
+	eventCh := make(chan Event)
+	errorCh := make(chan error)
+
+	go func() {
+		for {
+			sqsListener.ReceiveMessage(eventCh, errorCh)
+		}
+	}()
+
+	return eventCh, errorCh, nil
 }
 
-func (sqsEmit *SqsEmitter) Emit(event Event) error {
+func (sqsListener *SqsListener) ReceiveMessage(eventCh chan Event, errorCh chan error, events ...string) {
+	recvMsgResult, err := sqsListener.SqsSvc.ReceiveMessage(&sqs.ReceiveMessageInput{
+		MessageAttributeNames: []*string{
+			aws.String(sqs.QueueAttributeNameAll),
+		},
+		QueueUrl:            sqsListener.QueueURL,
+		MaxNumberOfMessages: aws.Int64(sqsListener.maxNumberOfMessages),
+		WaitTimeSeconds:     aws.Int64(sqsListener.waitTime),
+		VisibilityTimeout:   aws.Int64(sqsListener.visibilityTimeOut),
+	})
+
+	if err != nil {
+		errorCh <- err
+	}
+
+	bContinue := false
+
+	for _, msg := range recvMsgResult.Messages {
+		value, ok := msg.MessageAttributes["event_name"]
+		if !ok {
+			continue
+		}
+
+		eventName := aws.StringValue(value.StringValue)
+
+		for _, event := range events {
+			if strings.EqualFold(eventName, event) {
+				bContinue = true
+				break
+			}
+		}
+
+		if !bContinue {
+			continue
+		}
+
+		message := aws.StringValue(msg.Body)
+		var event Event
+
+		err = json.Unmarshal([]byte(message), &event)
+
+		if err != nil {
+			errorCh <- err
+		}
+
+		eventCh <- event
+
+		sqsListener.SqsSvc.DeleteMessage(&sqs.DeleteMessageInput{
+			QueueUrl:      sqsListener.QueueURL,
+			ReceiptHandle: msg.ReceiptHandle,
+		})
+
+		if err != nil {
+			errorCh <- err
+		}
+	}
+
+}
+
+func (SqsEmitter *SqsEmitter) Emit(event Event) error {
 	data, err := json.Marshal(event)
 	if err != nil {
 		return err
@@ -97,10 +172,10 @@ func (sqsEmit *SqsEmitter) Emit(event Event) error {
 		},
 	}
 	// 이곳에 작성되는 추가적인 옵션이나 설명은 블로그에서 다룰 예정
-	_, err = sqsEmit.SqsSvc.SendMessage(&sqs.SendMessageInput{
+	_, err = SqsEmitter.SqsSvc.SendMessage(&sqs.SendMessageInput{
 		MessageAttributes: attributes,
 		MessageBody:       aws.String(string(data)),
-		QueueUrl:          sqsEmit.QueueURL,
+		QueueUrl:          SqsEmitter.QueueURL,
 	})
 	return err
 }
@@ -122,6 +197,9 @@ func (sqsEmit *SqsEmitter) Emit(event Event) error {
 - 문자열, 숫자, 바이너리
 여기서 바이너리는 압축 파일이나 이미지 같은 바이너리를 의미
 */
+
+// -> 여기 아래에 있는 내용은 정말 Sample 함수들
+// 인터페이스를 구축하고 사용하는 코드는 위에 있는 코드를 참고
 
 func (sqsEmitter *SqsEmitter) SendMessageToSQS(queueName, message string) {
 	attributes := map[string]*sqs.MessageAttributeValue{
