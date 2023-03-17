@@ -50,7 +50,7 @@ func (goaws *AwsSession) SendMessageToSQS(queueName, message string) {
 			BinaryValue: []byte{0x00, 0x01, 0x02}, // [0,1,2]
 		},
 	}
-
+	// 이곳에 작성되는 추가적인 옵션이나 설명은 블로그에서 다룰 예정
 	sendResult, err := goaws.sqsQueue.SendMessage(&sqs.SendMessageInput{
 		MessageAttributes: attributes,
 		MessageBody:       aws.String(message),
@@ -86,3 +86,20 @@ SQS는 기본적으로 메시지를 수신한다고, 해당 메시지가 삭제 
 또다른 개념은 긴 폴링이나 대기시간이다.
 분산되어 있기 떄문에 떄떄로 수신이 늦어 질 수 있다. 이러한 점을 고려한다면 들어오는 메시지에 대한 대기를 더 길게 가져가야 한다.
 */
+
+// 이 함수는 특정 큐에 있는 메시지를 가져오는 함수가 된다.
+// 테스트 용도로 작성이 되며, 나중에는 go루틴으로 돌릴 예정이다.
+func (goaws *AwsSession) GetMessageFromSQS(queueName string) {
+	// 이곳에 작성되는 추가적인 옵션이나 설명은 블로그에서 다룰 예정
+	goaws.sqsQueue.ReceiveMessage(&sqs.ReceiveMessageInput{
+		AttributeNames: []*string{
+			aws.String(*aws.String(sqs.MessageSystemAttributeNameSentTimestamp)),
+		},
+		MessageAttributeNames: []*string{
+			aws.String(sqs.QueueAttributeNameAll),
+		},
+		QueueUrl:            goaws.GetSQSQueuUrl(queueName),
+		MaxNumberOfMessages: aws.Int64(10),
+		WaitTimeSeconds:     aws.Int64(20),
+	})
+}
