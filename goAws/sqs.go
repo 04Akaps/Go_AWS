@@ -1,6 +1,7 @@
 package goaws
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -11,15 +12,33 @@ import (
 )
 
 type EventEmitter interface {
-	Emit() error
+	Emit(event Event) error
 }
 
 type EventListener interface {
-	Listen(events ...string) (<-chan string, <-chan error, error) // 일단 string으로 작성 어떻게 작성할지 구조 좀 생각하고 작성 예정
+	Listen(events ...string) (<-chan Event, <-chan error, error) // 일단 string으로 작성 어떻게 작성할지 구조 좀 생각하고 작성 예정
 }
 
-func (goaws *AwsSession) NewSQSEventEmitter(s *session.Session, queueName string) (EventListener, error) {
-	sqsSvc := sqs.New(goaws.AwsSession)
+type SqsEmitter struct {
+	SqsSvc   *sqs.SQS
+	QueueURL *string
+}
+
+type SqsListener struct {
+	SqsSvc              *sqs.SQS
+	QueueURL            *string
+	maxNumberOfMessages int64
+	waitTime            int64
+	visibilityTimeOut   int64
+}
+
+type Event struct {
+	Name string `json:"name"`
+	Age  string `json:"age"`
+}
+
+func NewSQSEventEmitter(s *session.Session, queueName string) (EventEmitter, error) {
+	sqsSvc := sqs.New(s)
 	outInfo, err := sqsSvc.GetQueueUrl(&sqs.GetQueueUrlInput{
 		QueueName: aws.String(queueName),
 	})
@@ -33,8 +52,57 @@ func (goaws *AwsSession) NewSQSEventEmitter(s *session.Session, queueName string
 	}, nil
 }
 
-func (sqsEmitter *SqsEmitter) Listen(events ...string) (<-chan string, <-chan error, error) {
+func NewSqsEventListener(s *session.Session, queueName string, maxMsg, waitTime, visibiliryTimeOut int64) (listener EventListener, err error) {
+	if s == nil {
+		s, err = session.NewSession()
+		if err != nil {
+			return
+		}
+	}
+
+	svc := sqs.New(s)
+
+	outInfo, err := svc.GetQueueUrl(&sqs.GetQueueUrlInput{
+		QueueName: aws.String(queueName),
+	})
+	if err != nil {
+		return
+	}
+
+	listener = &SqsListener{
+		SqsSvc:              svc,
+		QueueURL:            outInfo.QueueUrl,
+		maxNumberOfMessages: maxMsg,
+		waitTime:            waitTime,
+		visibilityTimeOut:   visibiliryTimeOut,
+	}
+
+	return
+}
+
+func (sqsListener *SqsListener) Listen(events ...string) (<-chan Event, <-chan error, error) {
 	return nil, nil, nil
+}
+
+func (sqsEmit *SqsEmitter) Emit(event Event) error {
+	data, err := json.Marshal(event)
+	if err != nil {
+		return err
+	}
+
+	attributes := map[string]*sqs.MessageAttributeValue{
+		"event_name": {
+			DataType:    aws.String("String"),
+			StringValue: aws.String(event.Name),
+		},
+	}
+	// 이곳에 작성되는 추가적인 옵션이나 설명은 블로그에서 다룰 예정
+	_, err = sqsEmit.SqsSvc.SendMessage(&sqs.SendMessageInput{
+		MessageAttributes: attributes,
+		MessageBody:       aws.String(string(data)),
+		QueueUrl:          sqsEmit.QueueURL,
+	})
+	return err
 }
 
 /*
