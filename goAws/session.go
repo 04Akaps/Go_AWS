@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go/service/sqs"
 
 	"github.com/jjimgo/Go_AWS/errhandle"
 	"github.com/jjimgo/Go_AWS/goConfig"
@@ -19,6 +20,7 @@ type AwsSession struct {
 	AwsSession *session.Session
 	S3         *s3.S3
 	S3Uploader *s3manager.Uploader
+	sqsQueue   *sqs.SQS
 }
 
 type CustomLogger struct {
@@ -50,10 +52,12 @@ func GetSession(goConfig goConfig.GoConfig) *AwsSession {
 
 	svc := s3.New(awsSession)
 	uploader := s3manager.NewUploader(awsSession)
+	sqsSvc := sqs.New(awsSession)
 
 	return &AwsSession{
 		AwsSession: awsSession,
 		S3:         svc,
 		S3Uploader: uploader,
+		sqsQueue:   sqsSvc,
 	}
 }
