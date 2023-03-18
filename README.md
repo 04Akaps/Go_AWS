@@ -4,13 +4,14 @@ Golang에서 AWS서비스를 어떻게 활용하는지에 대한 repo
 
 # 살펴볼 AWS 서비스
 
-1. EC2
-2. S3
-3. SQS
-4. API Gateway
-5. DynamoDB
+1. S3 - 블로그, 코드 완
+2. SQS - 블로그, 코드 완
+3. API Gateway
+- API Gateway는 사싱상 코드에서 할 것이 없기 떄문에 따로 블로그로 정리 예정
+4. DynamoDB
 
 # app.env 형태
+- 특정 파일이 아니라 os.GetEnv가 더 안전
 
 aws_region= <value> -> 사용하는 aws서비스의 region
 
