@@ -30,12 +30,19 @@ type DatabaseHandler interface {
 	FindAllEvents() ([]DatabaseEvent, error)
 }
 
-func NewDynamoDBClient(s *session.Session) DatabaseHandler {
+func NewDynamoDBClient(s *session.Session) (DatabaseHandler, error) {
+	if s == nil {
+		s, err = session.NewSession()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	dynamoDBClient := dynamodb.New(s)
 
 	return &DynamoDBLayout{
 		DynamoDBSession: dynamoDBClient,
-	}
+	}, nil
 }
 
 func (dynamoDB *DynamoDBLayout) AddEvent(event DatabaseEvent) ([]byte, error) {
