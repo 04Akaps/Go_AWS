@@ -22,6 +22,7 @@ func init() {
 func main() {
 	// 서버 로그 처리에 대해서 고민하다가 aws와 같은 방식으로 적용한 서버에 대한 로그 처리 채널
 	// aws폴더에 있는 커스텀하게 작성한 interface를 사용하면 더 깔끔하게 작성 가능
+
 	// t := time.Now()
 	// startTime := t.Format("2006-01-02 15:04:05")
 	// logFile, err := os.Create("serverLog/server_" + startTime + ".log")
@@ -47,6 +48,4 @@ func main() {
 	// 	errChannel <- err
 	// }
 
-	// awsSession.SendMessageToSQS("golangEventQueue", "kdksdl")
-	// awsSession.GetMessageFromSQS("golangEventQueue")
 }

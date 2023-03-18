@@ -29,7 +29,7 @@ type DynamoDBLayout struct {
 
 type DatabaseHandler interface {
 	// DB에서 사용할 Handler
-	AddEvent(event DatabaseEvent) ([]byte, error)
+	AddEvent(event *DatabaseEvent) ([]byte, error)
 	FindEvent([]byte) (DatabaseEvent, error)
 	FindEventByName(string) (DatabaseEvent, error)
 	FindAllEvents() ([]DatabaseEvent, error)
@@ -50,7 +50,7 @@ func NewDynamoDBClient(s *session.Session) (handler DatabaseHandler, err error) 
 	}, err
 }
 
-func (dynamoDB *DynamoDBLayout) AddEvent(event DatabaseEvent) ([]byte, error) {
+func (dynamoDB *DynamoDBLayout) AddEvent(event *DatabaseEvent) ([]byte, error) {
 
 	if !event.ID.Valid() {
 		event.ID = bson.NewObjectId()
