@@ -21,7 +21,7 @@ type EventEmitter interface {
 
 type EventListener interface {
 	Listen(events ...string) (<-chan Event, <-chan error, error)
-	ReceiveMessage(eventCh chan Event, errorCh chan error, events ...string)
+	ReceiveMessage(eventCh chan Event, errorCh chan error, events []string)
 }
 
 type SqsEmitter struct {
@@ -92,17 +92,16 @@ func (sqsListener *SqsListener) Listen(events ...string) (<-chan Event, <-chan e
 
 	eventCh := make(chan Event)
 	errorCh := make(chan error)
-
 	go func() {
 		for {
-			sqsListener.ReceiveMessage(eventCh, errorCh)
+			sqsListener.ReceiveMessage(eventCh, errorCh, events)
 		}
 	}()
 
 	return eventCh, errorCh, nil
 }
 
-func (sqsListener *SqsListener) ReceiveMessage(eventCh chan Event, errorCh chan error, events ...string) {
+func (sqsListener *SqsListener) ReceiveMessage(eventCh chan Event, errorCh chan error, events []string) {
 	recvMsgResult, err := sqsListener.SqsSvc.ReceiveMessage(&sqs.ReceiveMessageInput{
 		MessageAttributeNames: []*string{
 			aws.String(sqs.QueueAttributeNameAll),
