@@ -6,7 +6,7 @@ Golang에서 AWS서비스를 어떻게 활용하는지에 대한 repo
 
 1. S3 - 블로그, 코드 완
 2. SQS - 블로그, 코드 완
-3. DynamoDB
+3. DynamoDB -  0, 코드 완
 
 # app.env 형태
 - 특정 파일이 아니라 os.GetEnv가 더 안전
