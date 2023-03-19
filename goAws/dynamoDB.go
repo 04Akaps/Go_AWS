@@ -1,6 +1,7 @@
 package goaws
 
 import (
+	"errors"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -50,8 +51,10 @@ func NewDynamoDBClient(s *session.Session) (handler DatabaseHandler, err error) 
 	}, err
 }
 
-func (dynamoDB *DynamoDBLayout) AddEvent(event *DatabaseEvent) ([]byte, error) {
-
+func (dynamoLayout *DynamoDBLayout) AddEvent(event *DatabaseEvent) ([]byte, error) {
+	// event에 대한 항목은 서버측 controller에서 진행 할 부분임
+	// 여기에서는 비지니스 로직만 담당
+	// 아래 있는 두 코드도 controller에서 처리 해야 할 문제이기는 함
 	if !event.ID.Valid() {
 		event.ID = bson.NewObjectId()
 	}
@@ -68,7 +71,8 @@ func (dynamoDB *DynamoDBLayout) AddEvent(event *DatabaseEvent) ([]byte, error) {
 		return nil, err
 	}
 
-	_, err = dynamoDB.DynamoDBSession.PutItem(&dynamodb.PutItemInput{
+	// Review : Put Item Request와의 차이점 정리 필요
+	_, err = dynamoLayout.DynamoDBSession.PutItem(&dynamodb.PutItemInput{
 		TableName: aws.String("events"),
 		Item:      newItem,
 	})
@@ -80,14 +84,76 @@ func (dynamoDB *DynamoDBLayout) AddEvent(event *DatabaseEvent) ([]byte, error) {
 	return []byte(event.ID), nil
 }
 
-func (dynamoDB *DynamoDBLayout) FindEvent(byte []byte) (DatabaseEvent, error) {
-	return DatabaseEvent{}, nil
+func (dynamoLayout *DynamoDBLayout) FindEvent(id []byte) (DatabaseEvent, error) {
+	// Review : Get Item 옵션 정리
+	input := &dynamodb.GetItemInput{
+		Key: map[string]*dynamodb.AttributeValue{
+			"ID": {
+				B: id,
+			},
+		},
+		TableName: aws.String("events"), // aws에서 테이블을 events로 선언
+	}
+	// Review : Get Item Request와의 차이점 정리 필요
+	result, err := dynamoLayout.DynamoDBSession.GetItem(input)
+
+	if err != nil {
+		return DatabaseEvent{}, err
+	}
+
+	event := DatabaseEvent{}
+	err = dynamodbattribute.UnmarshalMap(result.Item, &event)
+	// Review : 일반적인 Unmarshal, UnmarshalMap, json.UnMarshal이랑 차이점
+
+	return event, err
 }
 
-func (dynamoDB *DynamoDBLayout) FindEventByName(name string) (DatabaseEvent, error) {
-	return DatabaseEvent{}, nil
+func (dynamoLayer *DynamoDBLayout) FindEventByName(name string) (DatabaseEvent, error) {
+	// Review : Input 필드에 대해서 정리 필요
+	input := &dynamodb.QueryInput{
+		KeyConditionExpression: aws.String("EventName = :n"),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":n": {
+				S: aws.String(name),
+			},
+		},
+		IndexName: aws.String("EventName-index"),
+		TableName: aws.String("events"),
+	}
+
+	// Review : Query, QueryRequest, QueryPage등등에 대해서 정리
+	result, err := dynamoLayer.DynamoDBSession.Query(input)
+
+	if err != nil {
+		return DatabaseEvent{}, nil
+	}
+
+	event := DatabaseEvent{}
+
+	if len(result.Items) > 0 {
+		err = dynamodbattribute.UnmarshalMap(result.Items[0], &event)
+	} else {
+		err = errors.New("Not Found")
+	}
+
+	return event, err
 }
 
-func (dynamoDB *DynamoDBLayout) FindAllEvents() ([]DatabaseEvent, error) {
-	return nil, nil
+func (dynamoLayout *DynamoDBLayout) FindAllEvents() ([]DatabaseEvent, error) {
+
+	input := &dynamodb.ScanInput{
+		TableName: aws.String("events"),
+	}
+	// Review : Scan, ScanRequet, withContext 정리
+	result, err := dynamoLayout.DynamoDBSession.Scan(input)
+
+	if err != nil {
+		return nil, err
+	}
+
+	events := []DatabaseEvent{}
+	// Review
+	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &events)
+
+	return events, nil
 }
