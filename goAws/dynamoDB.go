@@ -30,7 +30,7 @@ type DynamoDBLayout struct {
 
 type DatabaseHandler interface {
 	// DB에서 사용할 Handler
-	AddEvent(event *DatabaseEvent) ([]byte, error)
+	AddEvent(event DatabaseEvent) ([]byte, error)
 	FindEvent([]byte) (DatabaseEvent, error)
 	FindEventByName(string) (DatabaseEvent, error)
 	FindAllEvents() ([]DatabaseEvent, error)
@@ -51,30 +51,35 @@ func NewDynamoDBClient(s *session.Session) (handler DatabaseHandler, err error) 
 	}, err
 }
 
-func (dynamoLayout *DynamoDBLayout) AddEvent(event *DatabaseEvent) ([]byte, error) {
+func (dynamoLayout *DynamoDBLayout) AddEvent(event DatabaseEvent) ([]byte, error) {
 	// event에 대한 항목은 서버측 controller에서 진행 할 부분임
 	// 여기에서는 비지니스 로직만 담당
+
 	// 아래 있는 두 코드도 controller에서 처리 해야 할 문제이기는 함
-	if !event.ID.Valid() {
-		event.ID = bson.NewObjectId()
-	}
-
-	for _, dummy := range event.DummyData {
-		if !dummy.ID.Valid() {
-			dummy.ID = bson.NewObjectId()
-		}
-	}
-
+	//if !event.ID.Valid() {
+	//	event.ID = bson.NewObjectId()
+	//}
+	//
+	//for _, dummy := range event.DummyData {
+	//	if !dummy.ID.Valid() {
+	//		dummy.ID = bson.NewObjectId()
+	//	}
+	//}
 	newItem, err := dynamodbattribute.MarshalMap(event)
 
 	if err != nil {
 		return nil, err
 	}
 
-	// Review : Put Item Request와의 차이점 정리 필요
 	_, err = dynamoLayout.DynamoDBSession.PutItem(&dynamodb.PutItemInput{
-		TableName: aws.String("events"),
-		Item:      newItem,
+		TableName:           aws.String("events"),
+		Item:                newItem,
+		ConditionExpression: aws.String("attribute_not_exists(id) OR id <>"),
+		Expected: map[string]*dynamodb.ExpectedAttributeValue{
+			"_id": {
+				Value: &dynamodb.AttributeValue{N: aws.String(event.ID.Hex())},
+			},
+		},
 	})
 
 	if err != nil {
@@ -88,7 +93,7 @@ func (dynamoLayout *DynamoDBLayout) FindEvent(id []byte) (DatabaseEvent, error) 
 	// Review : Get Item 옵션 정리
 	input := &dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			"ID": {
+			"_id": {
 				B: id,
 			},
 		},
