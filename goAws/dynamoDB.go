@@ -90,7 +90,6 @@ func (dynamoLayout *DynamoDBLayout) AddEvent(event DatabaseEvent) ([]byte, error
 }
 
 func (dynamoLayout *DynamoDBLayout) FindEvent(id []byte) (DatabaseEvent, error) {
-	// Review : Get Item 옵션 정리
 	input := &dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			"_id": {
@@ -99,7 +98,7 @@ func (dynamoLayout *DynamoDBLayout) FindEvent(id []byte) (DatabaseEvent, error) 
 		},
 		TableName: aws.String("events"), // aws에서 테이블을 events로 선언
 	}
-	// Review : Get Item Request와의 차이점 정리 필요
+
 	result, err := dynamoLayout.DynamoDBSession.GetItem(input)
 
 	if err != nil {
@@ -108,13 +107,11 @@ func (dynamoLayout *DynamoDBLayout) FindEvent(id []byte) (DatabaseEvent, error) 
 
 	event := DatabaseEvent{}
 	err = dynamodbattribute.UnmarshalMap(result.Item, &event)
-	// Review : 일반적인 Unmarshal, UnmarshalMap, json.UnMarshal이랑 차이점
 
 	return event, err
 }
 
 func (dynamoLayer *DynamoDBLayout) FindEventByName(name string) (DatabaseEvent, error) {
-	// Review : Input 필드에 대해서 정리 필요
 	input := &dynamodb.QueryInput{
 		KeyConditionExpression: aws.String("EventName = :n"),
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
@@ -126,7 +123,6 @@ func (dynamoLayer *DynamoDBLayout) FindEventByName(name string) (DatabaseEvent, 
 		TableName: aws.String("events"),
 	}
 
-	// Review : Query, QueryRequest, QueryPage등등에 대해서 정리
 	result, err := dynamoLayer.DynamoDBSession.Query(input)
 
 	if err != nil {
@@ -149,7 +145,6 @@ func (dynamoLayout *DynamoDBLayout) FindAllEvents() ([]DatabaseEvent, error) {
 	input := &dynamodb.ScanInput{
 		TableName: aws.String("events"),
 	}
-	// Review : Scan, ScanRequet, withContext 정리
 	result, err := dynamoLayout.DynamoDBSession.Scan(input)
 
 	if err != nil {
@@ -157,7 +152,6 @@ func (dynamoLayout *DynamoDBLayout) FindAllEvents() ([]DatabaseEvent, error) {
 	}
 
 	events := []DatabaseEvent{}
-	// Review
 	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &events)
 
 	return events, nil
